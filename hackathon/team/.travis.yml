@@ -1,0 +1,12 @@
+language: node_js
+before_install:
+  - export NODE_ENV=production
+  - npm install -g gulp
+node_js:
+  - "0.11"
+  - "0.10"
+env:
+  - TEST_SUITE=jshint jscs
+  #- TEST_SUITE=scripts styles images
+  - TEST_SUITE=test
+script: "gulp $TEST_SUITE"

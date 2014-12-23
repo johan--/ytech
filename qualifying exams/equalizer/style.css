@@ -1,0 +1,42 @@
+.equalizer-wrapper {
+  float:left; margin: 0 20px 20px 0;
+}
+
+.equalizer {
+  overflow: hidden;
+  border:1px solid #ddd;
+  
+  vertical-align: bottom;
+}
+
+.equalizer span {
+  display: inline-block;
+  
+  border-top: 2px solid red;
+  
+  vertical-align: bottom;
+  font-size: 0;
+  line-height: 0;
+  background: pink;
+}
+
+.equalizer.small {
+  width: 100px;
+  height: 100px;
+  
+  line-height: 100px;
+}
+
+.equalizer.normal {
+  width: 200px;
+  height: 200px;
+  
+  line-height: 200px;
+}
+
+.equalizer.big {
+  width: 300px;
+  height: 300px;
+  
+  line-height: 300px;
+}

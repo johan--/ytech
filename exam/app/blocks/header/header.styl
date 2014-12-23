@@ -1,0 +1,71 @@
+.header
+	padding 0 13px
+	border-bottom $border
+
+.header__logo
+.header__title
+	display table-cell
+
+.logo-link
+	position relative
+	display block
+
+	width 63px
+	height 52px
+
+.logo__image
+	position absolute
+	top 10px
+
+.header__title
+	vertical-align top
+
+.title
+	margin-top 13px
+	margin-left 11px
+
+.title-link
+	display inline-block
+	padding-right 7px
+
+	font-size 14px
+	font-weight 400
+
+.title-link__arrow_big
+.title-link__arrow_small
+	display inline-block
+	position relative
+
+	&:before
+		content ""
+		position absolute
+		top 0
+		left 100%
+
+.title-link__arrow_big
+	padding 2px
+
+	width 59px
+	height 24px
+
+	background #ffca00
+
+	&:before
+		border-left solid 7px #ffca00
+		border-top solid 14px transparent
+		border-bottom solid 14px transparent
+
+.title-link__arrow_small
+	width 59px
+	height 24px
+
+	line-height 24px
+	color #000
+	text-align center
+
+	background #fff
+
+	&:before
+		border-left solid 7px #fff
+		border-top solid 12px transparent
+		border-bottom solid 12px transparent

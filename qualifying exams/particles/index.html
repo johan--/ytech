@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<script src="lib/vendor/d3.v3.min.js"></script>
+		<script src="lib/vendor/lodash.js"></script>
+		<script src="lib/vector.js"></script>
+		<script src="particle.js"></script>
+	</head>
+	<body>
+		<script>
+			/**
+			 * Времени доводить до ума уже нет, так что можно кидать камнями. :)
+			 * Предпочёл потратить время на реализацию других заданий, чем довести до ума это.
+			 * Всё же те задания обязательные, а это нет. (Хотя на самом деле скорее всего это обязательное тоже)
+			 */
+
+			// размер контейнера
+			var size = 500,
+					// элемент мышки
+					root = {
+						x: null,
+						y: null,
+						r: 80,
+						fixed: true
+					},
+					// массив всех элементов
+					particles = [root];
+
+			// ф-ия заполнения массива
+			function buildData(target, count) {
+				for (var i = 0; i < count; i++) {
+					var particle = new Particle();
+					particle.random(size, 20, _.random);
+					target.push(particle);
+				};
+			};
+
+			// заполняем
+			buildData(particles, 15);
+
+			// большой блок инициации
+			var svg = d3.select('body').append('svg')
+						.attr('width', size)
+						.attr('height', size);
+
+			var force = d3.layout.force()
+					.friction(0)
+			    .gravity(0)
+			    .charge(0)
+			    .nodes(particles)
+			    .size([size, size])
+			    .start();
+
+			var circle = svg.selectAll('circle')
+				.data(particles)
+				.enter()
+				.append('circle')
+				.attr('cx', function(d) { return d.x })
+				.attr('cy', function(d) { return d.y })
+				.attr('r', function(d) { return d.r })
+				.attr('fill', function(d, i) { return i ? 'red' : 'white' })
+				.attr('stroke-dasharray', function(d, i) { return i ? '' : '10, 5' })
+				.attr('stroke', 'black')
+				.attr('stroke-width', function(d, i) { return i ? 2 : 1 });
+
+			// "движок"
+			force.on('tick', function(e) {
+				// используется только для обхода, в полне можно обойтись и обычными циклами.
+				// вот только они в d3js вроде как противоречат философии
+				var q = d3.geom.quadtree(particles);
+
+				// тем не менее, нам не нужен первый элемент курсора, так что цикл всё равно сделаем.
+				for (var i = 1; i < particles.length; i++) {
+					particles[i].move(size);
+					q.visit(collide(particles[i]));
+				};
+
+				// обновим что там наделали
+			  circle
+		      .attr("cx", function(d) { return d.x; })
+		      .attr("cy", function(d) { return d.y; });
+
+		    // анимация никогда не прекращается
+		    force.resume();
+			});
+
+			// обработчик движения мыши
+			svg.on("mousemove", function() {
+				// просто обновляем координаты 1го элемента
+			  var p1 = d3.mouse(this);
+			  root.px = p1[0];
+			  root.py = p1[1];
+			});
+
+			// оно!
+			function collide(el) {
+				// высчитываем границы крайних верхней, нижней, левой, правой точек.
+		    var r = el.r,
+		        nx1 = el.x - r,
+		        nx2 = el.x + r,
+		        ny1 = el.y - r,
+		        ny2 = el.y + r;
+
+		    // Столкновение со стенками
+		    // просто меняем угол. За пределы стенки не улетит, это учтено в движении. (Грубо, но учтено)
+
+	      if (nx2 >= size || nx1 <= 0) {
+	      	el.angle = Math.PI - el.angle;
+	      } else if (ny2 >= size || ny1 <= 0) {
+	      	el.angle = 2 * Math.PI - el.angle;
+	      };
+
+	      // Столкновение с другими объектами
+
+		    return function(quad, x1, y1, x2, y2) {
+		      if (quad.point && (quad.point !== el)) {
+		      	// Оцениваем сумму радиусов и фактическое расстояние между окружностями
+		        var x = el.x - quad.point.x,
+		            y = el.y - quad.point.y,
+		            l = Math.sqrt(x * x + y * y),
+		            r = el.r + quad.point.r;
+
+		        // Если объект не курсор
+		        if (quad.point !== root) {
+		        	// Окружности пересеклись
+			        if (l < r) {
+			        	// Вектор скорости 1й окружности
+			        	var elMoveV = new Vector(
+			        		{x: el.px, y: el.py},
+			        		{x: el.x, y: el.y}
+			        	);
+			        	// Вектор скорости 2й окружности
+			        	var quadMoveV = new Vector(
+			        		{x: quad.point.px, y: quad.point.py},
+			        		{x: quad.point.x, y: quad.point.y}
+			        	);
+			        	// Вектор от центра одной окружности к другой
+			        	var centerV = new Vector(
+			        		{x: el.x, y: el.y},
+			        		{x: quad.point.x, y: quad.point.y}
+			        	);
+
+			        	// Относительная скорость. Для того, чтобы можно было рассматривать ситему 2х объектов,
+			        	// как взаимодействие движущегося и статичного
+			        	// Далее алгоритм заимствован из наверняка известной вам статьи:
+			        	// http://www.gamasutra.com/view/feature/131424/pool_hall_lessons_fast_accurate_.php?page=1
+			        	// Там подробно объяснено и проиллюстрировано что за переменные такие.
+
+			        	var relMoveV = elMoveV.sub(quadMoveV);
+			        	var relMoveVN = relMoveV.normalize();
+
+			        	var D = relMoveVN.dot(centerV);
+
+			        	if (D <= 0) return;
+
+				        var F = l * l - D * D;
+
+				        var T = r * r - F;
+
+				        var distance = D - Math.sqrt(T);
+
+			        	var newRelMoveV = relMoveVN.multiply(distance);
+
+			        	var collideK = newRelMoveV.length() / relMoveV.length();
+
+			        	// подвинули до точки столкновения
+				        el.move(size, -collideK);
+				        quad.point.move(size, -collideK)
+
+
+				        // пошли считать само столкновение
+			        	var n = centerV.normalize();
+
+			        	var a1 = elMoveV.dot(n),
+			        			a2 = quadMoveV.dot(n),
+			        			P = 2 * (a1 - a2) / (el.v + quad.point.v);
+
+								v1 = elMoveV.sub(n.multiply(P * quad.point.v));
+								v2 = quadMoveV.sum(n.multiply(P * el.v));
+
+			        	el.s = v1.length();
+			        	el.angle = v1.theta();
+
+			        	quad.point.s = v2.length();
+			        	quad.point.angle = v2.theta();
+				      }
+
+			       } else {
+			       	// Тоже самое, что и выше, просто вместо скорости объекта используется сила,
+			       	// направленная по линии, соединяющей центры объектов.
+			       	// Получается эффект убегающих окружностей
+			       	if (l < r) {
+			        	var elMoveV = new Vector(
+			        		{x: el.px, y: el.py},
+			        		{x: el.x, y: el.y}
+			        	);
+			        	var quadMoveV = new Vector(
+			        		{x: quad.point.px, y: quad.point.py},
+			        		{x: quad.point.x, y: quad.point.y}
+			        	);
+			        	var centerV = new Vector(
+			        		{x: el.x, y: el.y},
+			        		{x: quad.point.x, y: quad.point.y}
+			        	);
+
+			        	var n = centerV.normalize();
+
+			        	var a1 = elMoveV.dot(n),
+			        			a2 = n.length() * l,
+			        			P = 2 * (a1 - a2) / 700;
+
+			        	v1 = elMoveV.sum(n.multiply(P));
+
+			        	el.s = v1.length();
+			        	el.angle = v1.theta();
+			        }
+		        };
+		      }
+		    };
+			};
+		</script>
+	</body>
+</html>

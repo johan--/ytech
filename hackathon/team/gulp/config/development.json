@@ -1,0 +1,20 @@
+{
+  "gulp": {
+    "paths": {
+      "blocksPath" : "./app/blocks/**/*",
+      "scriptsPaths" : [
+        "gulpfile.js",
+        "server.js",
+        "./app/**/*.js",
+        "./gulp/**/*.js"
+      ],
+      "testPath": [
+        "./tests/server/*.js"
+      ],
+      "publicPath": "./public.development/index/",
+      "appPath": "./app/browser/app.jsx",
+      "staticPath": "./static/*"
+    },
+    "default": ["styles", "scripts" , "images", "jshint" , "jscs", "static" , "watch"]
+  }
+}
